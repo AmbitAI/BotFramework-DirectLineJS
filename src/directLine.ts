@@ -335,6 +335,8 @@ export class DirectLine implements IBotConnection {
 
         this.activity$ = (this.webSocket
             ? this.webSocketActivity$()
+                // If connection to websocket fails, then fall back to polling
+                .catch(error => this.pollingGetActivity$())
             : this.pollingGetActivity$()
         ).share();
     }
@@ -630,7 +632,9 @@ export class DirectLine implements IBotConnection {
             // WebSockets can be closed by the server or the browser. In the former case we need to
             // retrieve a new streamUrl. In the latter case we could first retry with the current streamUrl,
             // but it's simpler just to always fetch a new one.
-            .retryWhen(error$ => error$.mergeMap(error => this.reconnectToConversation()))
+            // But, if the issue is with the websocket not being able to connect, then stop retrying
+            // so we can fallback to polling
+            .retryWhen(error$ => error$.mergeMap(error => error.code ? this.reconnectToConversation() : Observable.throw(error)))
         )
         .flatMap(activityGroup => this.observableFromActivityGroup(activityGroup))
     }
@@ -657,6 +661,13 @@ export class DirectLine implements IBotConnection {
                 konsole.log("WebSocket close", close);
                 if (sub) sub.unsubscribe();
                 subscriber.error(close);
+            }
+
+            // Catch websocket errors
+            ws.onerror = error => {
+                konsole.log("WebSocket error", error);
+                if (sub) sub.unsubscribe();
+                subscriber.error(error);
             }
 
             ws.onmessage = message => message.data && subscriber.next(JSON.parse(message.data));
@@ -686,7 +697,7 @@ export class DirectLine implements IBotConnection {
             .do(result => {
                 if (!this.secret)
                     this.token = result.response.token;
-                this.streamUrl = result.response.streamUrl;
+                this.streamUrl = result.response.streamUrl
             })
             .map(_ => null)
             .retryWhen(error$ => error$

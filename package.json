@@ -1,6 +1,6 @@
 {
-  "name": "botframework-directlinejs",
-  "version": "0.9.15",
+  "name": "ambit-directlinejs",
+  "version": "0.10.0",
   "description": "client library for the Microsoft Bot Framework Direct Line 3.0 protocol",
   "main": "built/directLine.js",
   "types": "built/directLine.d.ts",
@@ -15,9 +15,9 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://git@github.com/Microsoft/BotFramework-DirectLineJS.git"
+    "url": "git://git@github.com/AmbitAI/BotFramework-DirectLineJS.git"
   },
-  "author": "Microsoft Corp",
+  "author": "Microsoft Corp, Ambit-AI",
   "license": "MIT",
   "dependencies": {
     "rxjs": "^5.0.3"
