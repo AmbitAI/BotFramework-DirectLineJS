@@ -697,7 +697,7 @@ export class DirectLine implements IBotConnection {
             .do(result => {
                 if (!this.secret)
                     this.token = result.response.token;
-                this.streamUrl = result.response.streamUrl
+                this.streamUrl = result.response.streamUrl;
             })
             .map(_ => null)
             .retryWhen(error$ => error$
