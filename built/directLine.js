@@ -119,7 +119,7 @@ var DirectLine = /** @class */ (function () {
                             _this.refreshTokenLoop();
                         }
                         if (!_this.user) {
-                            _this.user = conversation.user;
+                            _this.user = JSON.stringify(conversation.user);
                         }
                         _this.connectionStatus$.next(ConnectionStatus.Online);
                     }, function (error) {
