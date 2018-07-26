@@ -32,7 +32,8 @@ export interface Conversation {
     token: string,
     eTag?: string,
     streamUrl?: string,
-    referenceGrammarId?: string
+    referenceGrammarId?: string,
+    user?: object
 }
 
 export type MediaType = "image/png" | "image/jpg" | "image/jpeg" | "image/gif" | "image/svg+xml" | "audio/mpeg" | "audio/mp4" | "video/mp4";
@@ -262,7 +263,8 @@ export interface DirectLineOptions {
     domain?: string,
     webSocket?: boolean,
     pollingInterval?: number,
-    streamUrl?: string
+    streamUrl?: string,
+    user?: object
 }
 
 const lifetimeRefreshToken = 30 * 60 * 1000;
@@ -297,12 +299,13 @@ export class DirectLine implements IBotConnection {
     private domain = "https://directline.botframework.com/v3/directline";
     private webSocket;
 
-    private conversationId: string;
+    public conversationId: string;
     private secret: string;
     private token: string;
     private watermark = '';
     private streamUrl: string;
     public referenceGrammarId: string;
+    public user: object;
 
     private pollingInterval: number = 1000;
 
@@ -330,8 +333,12 @@ export class DirectLine implements IBotConnection {
             else
                 console.warn("streamUrl was ignored: you need to provide a token and a conversationid");
         }
-        if (options.pollingInterval !== undefined)
+        if (options.pollingInterval !== undefined) {
             this.pollingInterval = options.pollingInterval;
+        }
+        if (options.user) {
+            this.user = options.user; 
+        }
 
         this.activity$ = (this.webSocket
             ? this.webSocketActivity$()
@@ -359,8 +366,12 @@ export class DirectLine implements IBotConnection {
                         this.token = this.secret || conversation.token;
                         this.streamUrl = conversation.streamUrl;
                         this.referenceGrammarId = conversation.referenceGrammarId;
-                        if (!this.secret)
+                        if (!this.secret) {
                             this.refreshTokenLoop();
+                        }
+                        if (!this.user) {
+                            this.user = conversation.user;
+                        }
 
                         this.connectionStatus$.next(ConnectionStatus.Online);
                     }, error => {
@@ -404,12 +415,13 @@ export class DirectLine implements IBotConnection {
         const url = this.conversationId 
             ? `${this.domain}/conversations/${this.conversationId}?watermark=${this.watermark}` 
             : `${this.domain}/conversations`;
-        const method = this.conversationId ? "GET" : "POST";
+        const method = "POST";
 
         return Observable.ajax({
             method,
             url,
             timeout,
+            body: { user: this.user },
             headers: {
                 "Accept": "application/json",
                 "Authorization": `Bearer ${this.token}`
@@ -686,9 +698,10 @@ export class DirectLine implements IBotConnection {
         return this.checkConnection(true)
         .flatMap(_ =>
             Observable.ajax({
-                method: "GET",
+                method: "POST",
                 url: `${this.domain}/conversations/${this.conversationId}?watermark=${this.watermark}`,
                 timeout,
+                body: { user: this.user },
                 headers: {
                     "Accept": "application/json",
                     "Authorization": `Bearer ${this.token}`
