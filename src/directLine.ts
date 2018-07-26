@@ -264,7 +264,7 @@ export interface DirectLineOptions {
     webSocket?: boolean,
     pollingInterval?: number,
     streamUrl?: string,
-    user?: object
+    user?: string
 }
 
 const lifetimeRefreshToken = 30 * 60 * 1000;
@@ -305,7 +305,7 @@ export class DirectLine implements IBotConnection {
     private watermark = '';
     private streamUrl: string;
     public referenceGrammarId: string;
-    public user: object;
+    public user: string;
 
     private pollingInterval: number = 1000;
 
@@ -370,7 +370,7 @@ export class DirectLine implements IBotConnection {
                             this.refreshTokenLoop();
                         }
                         if (!this.user) {
-                            this.user = conversation.user;
+                            this.user = JSON.stringify(conversation.user);
                         }
 
                         this.connectionStatus$.next(ConnectionStatus.Online);
