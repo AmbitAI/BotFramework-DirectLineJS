@@ -119,7 +119,7 @@ var DirectLine = /** @class */ (function () {
                             _this.refreshTokenLoop();
                         }
                         if (!_this.user) {
-                            _this.user = JSON.stringify(conversation.user);
+                            _this.user = conversation.user;
                         }
                         _this.connectionStatus$.next(ConnectionStatus.Online);
                     }, function (error) {
@@ -162,10 +162,11 @@ var DirectLine = /** @class */ (function () {
             method: method,
             url: url,
             timeout: timeout,
-            body: { user: this.user },
+            body: this.user,
             headers: {
                 "Accept": "application/json",
-                "Authorization": "Bearer " + this.token
+                "Authorization": "Bearer " + this.token,
+                "Content-Type": "application/json"
             }
         })
             //      .do(ajaxResponse => konsole.log("conversation ajaxResponse", ajaxResponse.response))
@@ -431,10 +432,11 @@ var DirectLine = /** @class */ (function () {
                 method: "POST",
                 url: _this.domain + "/conversations/" + _this.conversationId + "?watermark=" + _this.watermark,
                 timeout: timeout,
-                body: { user: _this.user },
+                body: _this.user,
                 headers: {
                     "Accept": "application/json",
-                    "Authorization": "Bearer " + _this.token
+                    "Authorization": "Bearer " + _this.token,
+                    "Content-Type": "application/json"
                 }
             })
                 .do(function (result) {
