@@ -421,7 +421,7 @@ export class DirectLine implements IBotConnection {
             method,
             url,
             timeout,
-            body: { user: this.user },
+            body: this.user,
             headers: {
                 "Accept": "application/json",
                 "Authorization": `Bearer ${this.token}`,
@@ -702,7 +702,7 @@ export class DirectLine implements IBotConnection {
                 method: "POST",
                 url: `${this.domain}/conversations/${this.conversationId}?watermark=${this.watermark}`,
                 timeout,
-                body: { user: this.user },
+                body: this.user,
                 headers: {
                     "Accept": "application/json",
                     "Authorization": `Bearer ${this.token}`,
