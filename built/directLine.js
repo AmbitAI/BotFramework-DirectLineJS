@@ -56,11 +56,12 @@ var konsole = {
             console.log.apply(console, [message].concat(optionalParams));
     }
 };
+var MS_DIRECT_LINE_DOMAIN = "https://directline.botframework.com/v3/directline";
 var DirectLine = /** @class */ (function () {
     function DirectLine(options) {
         var _this = this;
         this.connectionStatus$ = new BehaviorSubject_1.BehaviorSubject(ConnectionStatus.Uninitialized);
-        this.domain = "https://directline.botframework.com/v3/directline";
+        this.domain = MS_DIRECT_LINE_DOMAIN;
         this.watermark = '';
         this.pollingInterval = 1000;
         this.secret = options.secret;
@@ -157,7 +158,8 @@ var DirectLine = /** @class */ (function () {
         var url = this.conversationId
             ? this.domain + "/conversations/" + this.conversationId + "?watermark=" + this.watermark
             : this.domain + "/conversations";
-        var method = "POST";
+        var method = this.conversationId && this.domain === MS_DIRECT_LINE_DOMAIN
+            ? "GET" : "POST";
         return Observable_1.Observable.ajax({
             method: method,
             url: url,
@@ -296,7 +298,10 @@ var DirectLine = /** @class */ (function () {
                 return Observable_1.Observable.ajax({
                     method: "GET",
                     url: media.contentUrl,
-                    responseType: 'arraybuffer'
+                    responseType: 'arraybuffer',
+                    headers: {
+                        "Authorization": "Bearer " + _this.token
+                    }
                 })
                     .do(function (ajaxResponse) {
                     return formData.append('file', new Blob([ajaxResponse.response], { type: media.contentType }), media.name);
