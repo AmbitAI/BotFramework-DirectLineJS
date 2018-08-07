@@ -45,11 +45,11 @@ export interface Media {
     thumbnailUrl?: string
 }
 
-export interface UnknownMedia{
+export interface UnknownMedia {
     contentType: string,
     contentUrl: string,
     name?: string,
-    thumbnailUrl?: string    
+    thumbnailUrl?: string
 }
 
 export type CardActionTypes = "openUrl" | "imBack" | "postBack" | "playAudio" | "playVideo" | "showImage" | "downloadFile" | "signin" | "call";
@@ -277,9 +277,9 @@ const errorConversationEnded = new Error("conversation ended");
 const errorFailedToConnect = new Error("failed to connect");
 
 const konsole = {
-    log: (message?: any, ... optionalParams: any[]) => {
-        if (typeof(window) !== 'undefined' && window["botchatDebug"] && message)
-            console.log(message, ... optionalParams);
+    log: (message?: any, ...optionalParams: any[]) => {
+        if (typeof (window) !== 'undefined' && window["botchatDebug"] && message)
+            console.log(message, ...optionalParams);
     }
 }
 
@@ -289,14 +289,16 @@ export interface IBotConnection {
     end(): void,
     referenceGrammarId?: string,
     postActivity(activity: Activity): Observable<string>,
-    getSessionId? : () => Observable<string>
+    getSessionId?: () => Observable<string>
 }
+
+const MS_DIRECT_LINE_DOMAIN = "https://directline.botframework.com/v3/directline"
 
 export class DirectLine implements IBotConnection {
     public connectionStatus$ = new BehaviorSubject(ConnectionStatus.Uninitialized);
     public activity$: Observable<Activity>;
 
-    private domain = "https://directline.botframework.com/v3/directline";
+    private domain = MS_DIRECT_LINE_DOMAIN;
     private webSocket;
 
     public conversationId: string;
@@ -314,7 +316,7 @@ export class DirectLine implements IBotConnection {
     constructor(options: DirectLineOptions) {
         this.secret = options.secret;
         this.token = options.secret || options.token;
-        this.webSocket = (options.webSocket === undefined ? true : options.webSocket) && typeof WebSocket !== 'undefined' && WebSocket !== undefined; 
+        this.webSocket = (options.webSocket === undefined ? true : options.webSocket) && typeof WebSocket !== 'undefined' && WebSocket !== undefined;
 
         if (options.domain)
             this.domain = options.domain;
@@ -322,13 +324,13 @@ export class DirectLine implements IBotConnection {
             this.conversationId = options.conversationId;
         }
         if (options.watermark) {
-            if (this.webSocket) 
+            if (this.webSocket)
                 console.warn("Watermark was ignored: it is not supported using websockets at the moment");
             else
-                this.watermark =  options.watermark;
+                this.watermark = options.watermark;
         }
         if (options.streamUrl) {
-            if (options.token && options.conversationId) 
+            if (options.token && options.conversationId)
                 this.streamUrl = options.streamUrl;
             else
                 console.warn("streamUrl was ignored: you need to provide a token and a conversationid");
@@ -337,7 +339,7 @@ export class DirectLine implements IBotConnection {
             this.pollingInterval = options.pollingInterval;
         }
         if (options.user) {
-            this.user = options.user; 
+            this.user = options.user;
         }
 
         this.activity$ = (this.webSocket
@@ -351,55 +353,55 @@ export class DirectLine implements IBotConnection {
     // Every time we're about to make a Direct Line REST call, we call this first to see check the current connection status.
     // Either throws an error (indicating an error state) or emits a null, indicating a (presumably) healthy connection
     private checkConnection(once = false) {
-        let obs =  this.connectionStatus$
-        .flatMap(connectionStatus => {
-            if (connectionStatus === ConnectionStatus.Uninitialized) {
-                this.connectionStatus$.next(ConnectionStatus.Connecting);
+        let obs = this.connectionStatus$
+            .flatMap(connectionStatus => {
+                if (connectionStatus === ConnectionStatus.Uninitialized) {
+                    this.connectionStatus$.next(ConnectionStatus.Connecting);
 
-                //if token and streamUrl are defined it means reconnect has already been done. Skipping it.
-                if (this.token && this.streamUrl) {
-                    this.connectionStatus$.next(ConnectionStatus.Online);
-                    return Observable.of(connectionStatus);
-                } else {
-                    return this.startConversation().do(conversation => {
-                        this.conversationId = conversation.conversationId;
-                        this.token = this.secret || conversation.token;
-                        this.streamUrl = conversation.streamUrl;
-                        this.referenceGrammarId = conversation.referenceGrammarId;
-                        if (!this.secret) {
-                            this.refreshTokenLoop();
-                        }
-                        if (!this.user) {
-                            this.user = conversation.user;
-                        }
-
+                    //if token and streamUrl are defined it means reconnect has already been done. Skipping it.
+                    if (this.token && this.streamUrl) {
                         this.connectionStatus$.next(ConnectionStatus.Online);
-                    }, error => {
-                        this.connectionStatus$.next(ConnectionStatus.FailedToConnect);
-                    })
-                    .map(_ => connectionStatus);
+                        return Observable.of(connectionStatus);
+                    } else {
+                        return this.startConversation().do(conversation => {
+                            this.conversationId = conversation.conversationId;
+                            this.token = this.secret || conversation.token;
+                            this.streamUrl = conversation.streamUrl;
+                            this.referenceGrammarId = conversation.referenceGrammarId;
+                            if (!this.secret) {
+                                this.refreshTokenLoop();
+                            }
+                            if (!this.user) {
+                                this.user = conversation.user;
+                            }
+
+                            this.connectionStatus$.next(ConnectionStatus.Online);
+                        }, error => {
+                            this.connectionStatus$.next(ConnectionStatus.FailedToConnect);
+                        })
+                            .map(_ => connectionStatus);
+                    }
                 }
-            }
-            else {
-                return Observable.of(connectionStatus);            
-            }
-        })
-        .filter(connectionStatus => connectionStatus != ConnectionStatus.Uninitialized && connectionStatus != ConnectionStatus.Connecting)
-        .flatMap(connectionStatus => {
-            switch (connectionStatus) {
-                case ConnectionStatus.Ended:
-                    return Observable.throw(errorConversationEnded);
+                else {
+                    return Observable.of(connectionStatus);
+                }
+            })
+            .filter(connectionStatus => connectionStatus != ConnectionStatus.Uninitialized && connectionStatus != ConnectionStatus.Connecting)
+            .flatMap(connectionStatus => {
+                switch (connectionStatus) {
+                    case ConnectionStatus.Ended:
+                        return Observable.throw(errorConversationEnded);
 
-                case ConnectionStatus.FailedToConnect:
-                    return Observable.throw(errorFailedToConnect);
+                    case ConnectionStatus.FailedToConnect:
+                        return Observable.throw(errorFailedToConnect);
 
-                case ConnectionStatus.ExpiredToken:
-                    return Observable.throw(errorExpiredToken);
+                    case ConnectionStatus.ExpiredToken:
+                        return Observable.throw(errorExpiredToken);
 
-                default:
-                    return Observable.of(null);
-            }
-        })
+                    default:
+                        return Observable.of(null);
+                }
+            })
 
         return once ? obs.take(1) : obs;
     }
@@ -412,10 +414,11 @@ export class DirectLine implements IBotConnection {
 
     private startConversation() {
         //if conversationid is set here, it means we need to call the reconnect api, else it is a new conversation
-        const url = this.conversationId 
-            ? `${this.domain}/conversations/${this.conversationId}?watermark=${this.watermark}` 
+        const url = this.conversationId
+            ? `${this.domain}/conversations/${this.conversationId}?watermark=${this.watermark}`
             : `${this.domain}/conversations`;
-        const method = "POST";
+        const method = this.conversationId && this.domain === MS_DIRECT_LINE_DOMAIN
+            ? "GET" : "POST";
 
         return Observable.ajax({
             method,
@@ -428,54 +431,54 @@ export class DirectLine implements IBotConnection {
                 "Content-Type": "application/json"
             }
         })
-//      .do(ajaxResponse => konsole.log("conversation ajaxResponse", ajaxResponse.response))
-        .map(ajaxResponse => ajaxResponse.response as Conversation)
-        .retryWhen(error$ =>
-            // for now we deem 4xx and 5xx errors as unrecoverable
-            // for everything else (timeouts), retry for a while
-            error$.mergeMap(error => error.status >= 400 && error.status < 600
-                ? Observable.throw(error)
-                : Observable.of(error)
+            //      .do(ajaxResponse => konsole.log("conversation ajaxResponse", ajaxResponse.response))
+            .map(ajaxResponse => ajaxResponse.response as Conversation)
+            .retryWhen(error$ =>
+                // for now we deem 4xx and 5xx errors as unrecoverable
+                // for everything else (timeouts), retry for a while
+                error$.mergeMap(error => error.status >= 400 && error.status < 600
+                    ? Observable.throw(error)
+                    : Observable.of(error)
+                )
+                    .delay(timeout)
+                    .take(retries)
             )
-            .delay(timeout)
-            .take(retries)
-        )
     }
 
     private refreshTokenLoop() {
         this.tokenRefreshSubscription = Observable.interval(intervalRefreshToken)
-        .flatMap(_ => this.refreshToken())
-        .subscribe(token => {
-            konsole.log("refreshing token", token, "at", new Date());
-            this.token = token;
-        });
+            .flatMap(_ => this.refreshToken())
+            .subscribe(token => {
+                konsole.log("refreshing token", token, "at", new Date());
+                this.token = token;
+            });
     }
 
     private refreshToken() {
         return this.checkConnection(true)
-        .flatMap(_ =>
-            Observable.ajax({
-                method: "POST",
-                url: `${this.domain}/tokens/refresh`,
-                timeout,
-                headers: {
-                    "Authorization": `Bearer ${this.token}`
-                }
-            })
-            .map(ajaxResponse => ajaxResponse.response.token as string)
-            .retryWhen(error$ => error$
-                .mergeMap(error => {
-                    if (error.status === 403) {
-                        // if the token is expired there's no reason to keep trying
-                        this.expiredToken();
-                        return Observable.throw(error);
+            .flatMap(_ =>
+                Observable.ajax({
+                    method: "POST",
+                    url: `${this.domain}/tokens/refresh`,
+                    timeout,
+                    headers: {
+                        "Authorization": `Bearer ${this.token}`
                     }
-                    return Observable.of(error);
                 })
-                .delay(timeout)
-                .take(retries)
+                    .map(ajaxResponse => ajaxResponse.response.token as string)
+                    .retryWhen(error$ => error$
+                        .mergeMap(error => {
+                            if (error.status === 403) {
+                                // if the token is expired there's no reason to keep trying
+                                this.expiredToken();
+                                return Observable.throw(error);
+                            }
+                            return Observable.of(error);
+                        })
+                        .delay(timeout)
+                        .take(retries)
+                    )
             )
-        )
     }
 
     public reconnect(conversation: Conversation) {
@@ -490,7 +493,7 @@ export class DirectLine implements IBotConnection {
             this.tokenRefreshSubscription.unsubscribe();
         this.connectionStatus$.next(ConnectionStatus.Ended);
     }
-    
+
     getSessionId(): Observable<string> {
         // If we're not connected to the bot, get connected
         // Will throw an error if we are not connected
@@ -499,7 +502,7 @@ export class DirectLine implements IBotConnection {
             .flatMap(_ =>
                 Observable.ajax({
                     method: "GET",
-                    url: `${this.domain}/session/getsessionid`, 
+                    url: `${this.domain}/session/getsessionid`,
                     withCredentials: true,
                     timeout,
                     headers: {
@@ -507,11 +510,11 @@ export class DirectLine implements IBotConnection {
                         "Authorization": `Bearer ${this.token}`
                     }
                 })
-                .map(ajaxResponse => {
-                    konsole.log("getSessionId response: " + ajaxResponse.response.sessionId);
-                    return ajaxResponse.response.sessionId as string;
-                })
-                .catch(error => this.catchPostError(error))
+                    .map(ajaxResponse => {
+                        konsole.log("getSessionId response: " + ajaxResponse.response.sessionId);
+                        return ajaxResponse.response.sessionId as string;
+                    })
+                    .catch(error => this.catchPostError(error))
             )
             .catch(error => this.catchExpiredToken(error));
     }
@@ -527,62 +530,65 @@ export class DirectLine implements IBotConnection {
         // Will throw an error if we are not connected
         konsole.log("postActivity", activity);
         return this.checkConnection(true)
-        .flatMap(_ =>
-            Observable.ajax({
-                method: "POST",
-                url: `${this.domain}/conversations/${this.conversationId}/activities`,
-                body: activity,
-                timeout,
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${this.token}`
-                }
-            })
-            .map(ajaxResponse => ajaxResponse.response.id as string)
-            .catch(error => this.catchPostError(error))
-        )
-        .catch(error => this.catchExpiredToken(error));
+            .flatMap(_ =>
+                Observable.ajax({
+                    method: "POST",
+                    url: `${this.domain}/conversations/${this.conversationId}/activities`,
+                    body: activity,
+                    timeout,
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${this.token}`
+                    }
+                })
+                    .map(ajaxResponse => ajaxResponse.response.id as string)
+                    .catch(error => this.catchPostError(error))
+            )
+            .catch(error => this.catchExpiredToken(error));
     }
 
-    private postMessageWithAttachments({ attachments, ... messageWithoutAttachments }: Message) {
+    private postMessageWithAttachments({ attachments, ...messageWithoutAttachments }: Message) {
         let formData: FormData;
 
         // If we're not connected to the bot, get connected
         // Will throw an error if we are not connected
         return this.checkConnection(true)
-        .flatMap(_ => {
-            // To send this message to DirectLine we need to deconstruct it into a "template" activity
-            // and one blob for each attachment.
-            formData = new FormData();
-            formData.append('activity', new Blob([JSON.stringify(messageWithoutAttachments)], { type: 'application/vnd.microsoft.activity' }));
+            .flatMap(_ => {
+                // To send this message to DirectLine we need to deconstruct it into a "template" activity
+                // and one blob for each attachment.
+                formData = new FormData();
+                formData.append('activity', new Blob([JSON.stringify(messageWithoutAttachments)], { type: 'application/vnd.microsoft.activity' }));
 
-            return Observable.from(attachments || [])
-            .flatMap((media: Media) =>
-                Observable.ajax({
-                    method: "GET",
-                    url: media.contentUrl,
-                    responseType: 'arraybuffer'
-                })
-                .do(ajaxResponse =>
-                    formData.append('file', new Blob([ajaxResponse.response], { type: media.contentType }), media.name)
-                )
-            )
-            .count()
-        })
-        .flatMap(_ =>
-            Observable.ajax({
-                method: "POST",
-                url: `${this.domain}/conversations/${this.conversationId}/upload?userId=${messageWithoutAttachments.from.id}`,
-                body: formData,
-                timeout,
-                headers: {
-                    "Authorization": `Bearer ${this.token}`
-                }
+                return Observable.from(attachments || [])
+                    .flatMap((media: Media) =>
+                        Observable.ajax({
+                            method: "GET",
+                            url: media.contentUrl,
+                            responseType: 'arraybuffer',
+                            headers: {
+                                "Authorization": `Bearer ${this.token}`
+                            }
+                        })
+                            .do(ajaxResponse =>
+                                formData.append('file', new Blob([ajaxResponse.response], { type: media.contentType }), media.name)
+                            )
+                    )
+                    .count()
             })
-            .map(ajaxResponse => ajaxResponse.response.id as string)
-            .catch(error => this.catchPostError(error))
-        )
-        .catch(error => this.catchPostError(error));
+            .flatMap(_ =>
+                Observable.ajax({
+                    method: "POST",
+                    url: `${this.domain}/conversations/${this.conversationId}/upload?userId=${messageWithoutAttachments.from.id}`,
+                    body: formData,
+                    timeout,
+                    headers: {
+                        "Authorization": `Bearer ${this.token}`
+                    }
+                })
+                    .map(ajaxResponse => ajaxResponse.response.id as string)
+                    .catch(error => this.catchPostError(error))
+            )
+            .catch(error => this.catchPostError(error));
     }
 
     private catchPostError(error: any) {
@@ -597,39 +603,39 @@ export class DirectLine implements IBotConnection {
 
     private catchExpiredToken(error: any) {
         return error === errorExpiredToken
-        ? Observable.of("retry")
-        : Observable.throw(error);
+            ? Observable.of("retry")
+            : Observable.throw(error);
     }
 
     private pollingGetActivity$() {
         return Observable.interval(this.pollingInterval)
-        .combineLatest(this.checkConnection())
-        .flatMap(_ =>
-            Observable.ajax({
-                method: "GET",
-                url: `${this.domain}/conversations/${this.conversationId}/activities?watermark=${this.watermark}`,
-                timeout,
-                headers: {
-                    "Accept": "application/json",
-                    "Authorization": `Bearer ${this.token}`
-                }
-            })
-            .catch(error => {
-                if (error.status === 403) {
-                    // This is slightly ugly. We want to update this.connectionStatus$ to ExpiredToken so that subsequent
-                    // calls to checkConnection will throw an error. But when we do so, it causes this.checkConnection()
-                    // to immediately throw an error, which is caught by the catch() below and transformed into an empty
-                    // object. Then next() returns, and we emit an empty object. Which means one 403 is causing
-                    // two empty objects to be emitted. Which is harmless but, again, slightly ugly.
-                    this.expiredToken();
-                }
-                return Observable.empty<AjaxResponse>();
-            })
-//          .do(ajaxResponse => konsole.log("getActivityGroup ajaxResponse", ajaxResponse))
-            .map(ajaxResponse => ajaxResponse.response as ActivityGroup)
-            .flatMap(activityGroup => this.observableFromActivityGroup(activityGroup))
-        )
-        .catch(error => Observable.empty<Activity>());
+            .combineLatest(this.checkConnection())
+            .flatMap(_ =>
+                Observable.ajax({
+                    method: "GET",
+                    url: `${this.domain}/conversations/${this.conversationId}/activities?watermark=${this.watermark}`,
+                    timeout,
+                    headers: {
+                        "Accept": "application/json",
+                        "Authorization": `Bearer ${this.token}`
+                    }
+                })
+                    .catch(error => {
+                        if (error.status === 403) {
+                            // This is slightly ugly. We want to update this.connectionStatus$ to ExpiredToken so that subsequent
+                            // calls to checkConnection will throw an error. But when we do so, it causes this.checkConnection()
+                            // to immediately throw an error, which is caught by the catch() below and transformed into an empty
+                            // object. Then next() returns, and we emit an empty object. Which means one 403 is causing
+                            // two empty objects to be emitted. Which is harmless but, again, slightly ugly.
+                            this.expiredToken();
+                        }
+                        return Observable.empty<AjaxResponse>();
+                    })
+                    //          .do(ajaxResponse => konsole.log("getActivityGroup ajaxResponse", ajaxResponse))
+                    .map(ajaxResponse => ajaxResponse.response as ActivityGroup)
+                    .flatMap(activityGroup => this.observableFromActivityGroup(activityGroup))
+            )
+            .catch(error => Observable.empty<Activity>());
     }
 
     private observableFromActivityGroup(activityGroup: ActivityGroup) {
@@ -640,16 +646,16 @@ export class DirectLine implements IBotConnection {
 
     private webSocketActivity$(): Observable<Activity> {
         return this.checkConnection()
-        .flatMap(_ =>
-            this.observableWebSocket<ActivityGroup>()
-            // WebSockets can be closed by the server or the browser. In the former case we need to
-            // retrieve a new streamUrl. In the latter case we could first retry with the current streamUrl,
-            // but it's simpler just to always fetch a new one.
-            // But, if the issue is with the websocket not being able to connect, then stop retrying
-            // so we can fallback to polling
-            .retryWhen(error$ => error$.mergeMap(error => error.code ? this.reconnectToConversation() : Observable.throw(error)))
-        )
-        .flatMap(activityGroup => this.observableFromActivityGroup(activityGroup))
+            .flatMap(_ =>
+                this.observableWebSocket<ActivityGroup>()
+                    // WebSockets can be closed by the server or the browser. In the former case we need to
+                    // retrieve a new streamUrl. In the latter case we could first retry with the current streamUrl,
+                    // but it's simpler just to always fetch a new one.
+                    // But, if the issue is with the websocket not being able to connect, then stop retrying
+                    // so we can fallback to polling
+                    .retryWhen(error$ => error$.mergeMap(error => error.code ? this.reconnectToConversation() : Observable.throw(error)))
+            )
+            .flatMap(activityGroup => this.observableFromActivityGroup(activityGroup))
     }
 
     // Originally we used Observable.webSocket, but it's fairly opionated  and I ended up writing
@@ -697,37 +703,37 @@ export class DirectLine implements IBotConnection {
 
     private reconnectToConversation() {
         return this.checkConnection(true)
-        .flatMap(_ =>
-            Observable.ajax({
-                method: "POST",
-                url: `${this.domain}/conversations/${this.conversationId}?watermark=${this.watermark}`,
-                timeout,
-                body: this.user,
-                headers: {
-                    "Accept": "application/json",
-                    "Authorization": `Bearer ${this.token}`,
-                    "Content-Type": "application/json"
-                }
-            })
-            .do(result => {
-                if (!this.secret)
-                    this.token = result.response.token;
-                this.streamUrl = result.response.streamUrl;
-            })
-            .map(_ => null)
-            .retryWhen(error$ => error$
-                .mergeMap(error => {
-                    if (error.status === 403) {
-                        // token has expired. We can't recover from this here, but the embedding
-                        // website might eventually call reconnect() with a new token and streamUrl.
-                        this.expiredToken();
+            .flatMap(_ =>
+                Observable.ajax({
+                    method: "POST",
+                    url: `${this.domain}/conversations/${this.conversationId}?watermark=${this.watermark}`,
+                    timeout,
+                    body: this.user,
+                    headers: {
+                        "Accept": "application/json",
+                        "Authorization": `Bearer ${this.token}`,
+                        "Content-Type": "application/json"
                     }
-                    return Observable.of(error);
                 })
-                .delay(timeout)
-                .take(retries)
+                    .do(result => {
+                        if (!this.secret)
+                            this.token = result.response.token;
+                        this.streamUrl = result.response.streamUrl;
+                    })
+                    .map(_ => null)
+                    .retryWhen(error$ => error$
+                        .mergeMap(error => {
+                            if (error.status === 403) {
+                                // token has expired. We can't recover from this here, but the embedding
+                                // website might eventually call reconnect() with a new token and streamUrl.
+                                this.expiredToken();
+                            }
+                            return Observable.of(error);
+                        })
+                        .delay(timeout)
+                        .take(retries)
+                    )
             )
-        )
     }
 
 }
